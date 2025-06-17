@@ -4,8 +4,6 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { GeminiAgentService } from 'src/gemini-agent/gemini-agent.service';
 @Injectable()
-
-// MANEJAR LA LOGICA DE GOOGLE SHEETS Y ARMAR EL PROMPT DE GEMINI . TAMBIEN QUE TENGA CONEXION CON GOOGLE CALENDAR PARA QUE SIRVA COMO AGENDADOR Y RECORDADOR DE EVENTOS
 export class ChannelService {
   constructor(
     private readonly httpService: HttpService,
@@ -30,19 +28,20 @@ export class ChannelService {
   }
 
   async handleMessages(request: any) {
+    let iaResponse: any;
     const messages = request?.entry?.[0]?.changes?.[0]?.value?.messages || [];
 
     if (!messages) return;
-
-    console.log(messages);
 
     const message = messages[0];
     const messageFrom = message?.from;
     const text = message?.text.body;
 
-    const iaResponse = await this.geminiService.generateAIResponse(text);
+    if (messages.length > 0) {
+      iaResponse = await this.geminiService.generateAIResponse(text);
+    }
 
-    const url = `https:graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID}/messages`;
+    const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID}/messages`;
 
     const config = {
       headers: {
@@ -54,7 +53,9 @@ export class ChannelService {
     let fromFormated: any;
 
     if (messageFrom?.charAt(2) === '9') {
+      console.log(messageFrom);
       fromFormated = messageFrom.slice(0, 2) + messageFrom.slice(3);
+      console.log(fromFormated);
     }
 
     const data = {
@@ -76,6 +77,7 @@ export class ChannelService {
           throw new BadRequestException('Error posting to WhatsApp Cloud API');
         }),
       );
+      return response;
     } catch (error) {
       return 'Error';
     }
