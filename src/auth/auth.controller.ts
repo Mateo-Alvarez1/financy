@@ -2,10 +2,18 @@ import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './utils/Guards';
+import { User } from './entities/user.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ChannelService } from 'src/channel/channel.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly channelService: ChannelService,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+  ) {}
 
   @Get('google/login')
   @UseGuards(GoogleAuthGuard)
@@ -15,8 +23,16 @@ export class AuthController {
 
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
-  handleRedirect() {
-    return { message: 'ok' };
+  async handleRedirect(@Req() req: any) {
+    const { email } = req.user;
+
+    const session = await this.userRepository.findOneBy({
+      email: email,
+    });
+
+    if (session) {
+      return ' Iniciaste sesion correctamente , ya puedes usar financy ';
+    }
   }
 
   @Get('status')

@@ -1,13 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-google-oauth20';
-import { AuthService } from '../auth.service';
 import { ConfigService } from '@nestjs/config';
+import { AuthService } from '../auth.service';
+import { Request } from 'express';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy) {
   constructor(
-    // @Inject('AUTH_SERVICE') private readonly authService: AuthService,
+    @Inject('AUTH_SERVICE') private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {
     super({
@@ -18,16 +19,27 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  authorizationParams(options: any) {
+    return {
+      access_type: 'offline',
+      prompt: 'consent',
+    };
+  }
+
   async validate(accessToken: string, refreshToken: string, profile: Profile) {
-    console.log(accessToken);
-    console.log(refreshToken);
-    console.log(profile);
-    // const user = await this.authService.validateUser({
-    //   email: profile.emails[0].value,
-    //   displayName: profile.displayName,
-    // });
-    // console.log('Validate');
-    // console.log(user);
-    // return user || null;
+    const email = profile.emails?.[0]?.value;
+
+    if (!email) {
+      throw new Error('Email not found in Google profile');
+    }
+
+    const user = await this.authService.validateUser({
+      email,
+      displayName: profile.displayName,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    return user || null;
   }
 }

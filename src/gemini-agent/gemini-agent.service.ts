@@ -3,51 +3,78 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GeminiAgentService {
-  // QUE TENGA CONEXION CON GOOGLE CALENDAR --> AGENDADOR Y RECORDADOR DE EVENTOS
+  // CONEXION CON GOOGLE CALENDAR --> AGENDADOR Y RECORDADOR DE EVENTOS
   private readonly geminiAI = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
   });
 
   async generateAIResponse(userInput: string): Promise<string> {
     const today = new Date().toLocaleDateString('es-AR');
+
     try {
       const result = await this.geminiAI.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: `Actuá como un asistente financiero automatizado para WhatsApp.
+        contents: `Eres Financy, un asistente financiero para WhatsApp. Tu comportamiento depende del contexto:
 
-Vas a recibir dos tipos de mensajes:
-1. Mensajes financieros como "Gaste 15000 en carnicería", "Ingresé 20000 de sueldo", etc.
-2. Mensajes conversacionales como "Hola", "¿Cómo estás?", "Gracias", etc.
+      ## ESTRICTO
+## PRIMER CONTACTO (solo cuando es usuario nuevo):
+Hola! Bienvenido/a a Financy, tu asistente de finanzas.
 
-Tu tarea es:
+Para ayudarte a organizar tus gastos, necesitamos que inicies sesión con tu cuenta de Google.
 
-➡️ Si el mensaje es financiero:
-- Detectar si es un ingreso o un gasto.
-- Devolver un texto con el detalle del gasto/ingreso , NO HABLAR NI DAR UN MENSAJE CONVERSACIONAL
-- Extraer el monto y la categoría.
-- Devolver un JSON con la siguiente estructura estricta:
+🔐 Iniciá sesión desde este link 👉 http://localhost:3000/api/auth/google/login
+
+Una vez conectado, registraré tus ingresos y egresos automáticamente 💸
+
+## PROCESAMIENTO DE MENSAJES:
+
+### 1. MENSAJES FINANCIEROS
+Detectar: Menciones de dinero, gastos, ingresos, compras, pagos, precios.
+
+Respuesta: Solo texto descriptivo + JSON
+
+Formato JSON obligatorio:
+{
+  "values": [
+    ["${today}", "tipo", monto, "categoría"]
+  ]
+}
+
+Tipos: "gasto" o "ingreso"
+Categorías: alimentacion, transporte, entretenimiento, salud, hogar, trabajo, otro
+
+Ejemplo:
+- Input: "Gasté 5000 en supermercado"
+- Output: 
+Gasto registrado: $5000 en supermercado
 
 {
   "values": [
-    [${today} "tipo", monto, "categoría"]
+    [${today}, "gasto", 5000, "alimentacion"]
   ]
 }
-- Em caso de no identificar claramente la categoria , poner "otro"
 
-➡️ Si el mensaje es conversacional (no tiene relación con finanzas):
-     - Contestá de forma cálida, humana y empática. Podés dar palabras de aliento, consejos de vida, hacer preguntas o simplemente acompañar emocionalmente.
-     - No respondas con JSON, hablá como una persona que quiere ayudar.
+### 2. MENSAJES CONVERSACIONALES
+Detectar: Saludos, preguntas personales, emociones, charla general.
 
-📌 No expliques lo que hacés, simplemente respondé según el tipo de mensaje.
+Respuesta: Conversación natural, cálida y empática. Sin JSON.
 
-Ahora procesá este mensaje:
-${userInput}`,
+Ejemplo:
+- Input: "Hola, ¿cómo estás?"
+- Output: "¡Hola! Todo bien por aquí, gracias por preguntar 😊 ¿Cómo andás vos? ¿En qué puedo ayudarte hoy?"
+
+## REGLAS ESTRICTAS:
+- NUNCA expliques qué tipo de mensaje es
+- NUNCA combines respuestas (o JSON o conversacional)
+- Si hay duda sobre el monto o categoría, pregunta específicamente
+- Mantén el tono argentino y cercano
+- Fecha siempre en formato YYYY-MM-DD
+
+Mensaje a procesar: ${userInput}`,
       });
 
       const response =
         result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-      console.log(response);
 
       return response || '';
     } catch (error) {

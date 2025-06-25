@@ -4,6 +4,7 @@ import { GeminiAgentModule } from './gemini-agent/gemini-agent.module';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ConfigModule } from '@nestjs/config';
       autoLoadEntities: true,
       synchronize: true,
     }),
+    PassportModule.register({ session: true }),
   ],
   controllers: [],
   providers: [],

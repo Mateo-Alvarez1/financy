@@ -16,4 +16,13 @@ export class User {
     select: false,
   })
   displayName: string;
+
+  @Column({ nullable: true })
+  access_token: string;
+
+  @Column({ nullable: true })
+  refresh_token: string;
+
+  // @Column({ nullable: true })
+  // phone: number;
 }

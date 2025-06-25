@@ -28,19 +28,20 @@ export class ChannelService {
   }
 
   async handleMessages(request: any) {
-    let iaResponse: any;
     const messages = request?.entry?.[0]?.changes?.[0]?.value?.messages || [];
-
-    if (!messages) return;
+    if (!messages.length) return;
 
     const message = messages[0];
+    if (!message?.text || message?.type !== 'text') return;
     const messageFrom = message?.from;
     const text = message?.text.body;
 
-    if (messages.length > 0) {
-      iaResponse = await this.geminiService.generateAIResponse(text);
-    }
+    const iaResponse = await this.geminiService.generateAIResponse(text);
 
+    return this.sendMessage(messageFrom, iaResponse);
+  }
+
+  async sendMessage(to: string, text: string) {
     const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID}/messages`;
 
     const config = {
@@ -50,35 +51,39 @@ export class ChannelService {
       },
     };
 
-    let fromFormated: any;
-
-    if (messageFrom?.charAt(2) === '9') {
-      console.log(messageFrom);
-      fromFormated = messageFrom.slice(0, 2) + messageFrom.slice(3);
-      console.log(fromFormated);
+    let fromFormatted = to;
+    if (to.charAt(2) === '9') {
+      fromFormatted = to.slice(0, 2) + to.slice(3);
     }
 
     const data = {
       messaging_product: 'whatsapp',
-      to: fromFormated,
+      to: fromFormatted,
       type: 'text',
       text: {
         preview_url: false,
-        body: iaResponse,
+        body: text,
       },
     };
 
     try {
-      let response = this.httpService.post(url, data, config).pipe(
-        map((res) => {
-          return res.data;
-        }),
-        catchError((error) => {
-          throw new BadRequestException('Error posting to WhatsApp Cloud API');
-        }),
+      const response = await lastValueFrom(
+        this.httpService.post(url, data, config).pipe(
+          map((res) => res.data),
+          catchError((error) => {
+            console.error(
+              'Error posting to WhatsApp Cloud API:',
+              error?.response?.data || error.message,
+            );
+            throw new BadRequestException(
+              'Error posting to WhatsApp Cloud API',
+            );
+          }),
+        ),
       );
       return response;
     } catch (error) {
+      console.error('Catch general error:', error);
       return 'Error';
     }
   }

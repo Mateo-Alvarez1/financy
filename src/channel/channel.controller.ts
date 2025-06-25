@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { ChannelService } from './channel.service';
 import { Request } from 'express';
+import { User } from 'src/auth/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Controller('channel')
 export class ChannelController {

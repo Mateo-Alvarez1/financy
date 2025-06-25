@@ -7,6 +7,7 @@ import { GeminiAgentModule } from 'src/gemini-agent/gemini-agent.module';
 @Module({
   controllers: [ChannelController],
   providers: [ChannelService],
+  exports: [ChannelService],
   imports: [HttpModule, GeminiAgentModule],
 })
 export class ChannelModule {}
